@@ -1,7 +1,7 @@
 package main
  
 import (
-    _ "go-sql-driver/mysql"
+    _ "github.com/go-sql-driver/mysql"
     "database/sql"
     "fmt"
     "net/http"

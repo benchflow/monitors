@@ -9,7 +9,7 @@ import (
     "strconv"
     "os"
 )
-import "fsouza/go-dockerclient"
+import "github.com/fsouza/go-dockerclient"
 
 type Container struct {
 	ID string
