@@ -1,10 +1,10 @@
 FROM golang
  
-ADD src/cloud/benchflow/collectors /go/src/cloud/benchflow/collectors
+ADD src/cloud/benchflow/monitors /go/src/cloud/benchflow/monitors
 
 RUN go get github.com/fsouza/go-dockerclient
-RUN go install cloud/benchflow/collectors
+RUN go install cloud/benchflow/monitors
 
-ENTRYPOINT /go/bin/collectors
+ENTRYPOINT /go/bin/monitors
  
 EXPOSE 8080

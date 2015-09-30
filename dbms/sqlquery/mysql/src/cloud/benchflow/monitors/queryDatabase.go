@@ -4,15 +4,13 @@ import (
     _ "github.com/go-sql-driver/mysql"
     "database/sql"
     "fmt"
+    "os"
     "net/http"
 )
- 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Greetings!")
-}
 
 func queryHandler(w http.ResponseWriter, r *http.Request) {
-    db, err := sql.Open("mysql", "root:PASSWORD@tcp(db:3306)/stuff")
+	entryString := os.Getenv("MYSQL_USER")+":"+os.Getenv("MYSQL_USER_PASSWORD")+"@"+"tcp("+os.Getenv("MYSQL_HOST")+":3306)/"+os.Getenv("MYSQL_DB_NAME")
+    db, err := sql.Open("mysql", entryString)
     if err != nil {
         panic(err)
     }
@@ -57,7 +55,6 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 }
  
 func main() {
-    http.HandleFunc("/", helloHandler)
     http.HandleFunc("/status", queryHandler)
     http.ListenAndServe(":8080", nil)
 }
