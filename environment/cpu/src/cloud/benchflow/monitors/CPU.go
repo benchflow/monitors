@@ -156,12 +156,16 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 }
  
 func main() {
+	/*
 	path := os.Getenv("DOCKER_CERT_PATH")
 	endpoint := os.Getenv("DOCKER_HOST")
     ca := fmt.Sprintf("%s/ca.pem", path)
     cert := fmt.Sprintf("%s/cert.pem", path)
     key := fmt.Sprintf("%s/key.pem", path)
     client, err := docker.NewTLSClient(endpoint, cert, key, ca)
+    */
+	endpoint := "unix:///var/run/docker.sock"
+    client, err := docker.NewClient(endpoint)
 	if err != nil {
     	log.Fatal(err)
 	}
