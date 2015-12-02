@@ -80,7 +80,7 @@ func monitorStats(container Container){
 				waitGroup.Done()
 				return
 			default:
-				stat := <- container.statsChannel
+				stat := (<-container.statsChannel)
 				count5Value += stat.CPUStats.CPUUsage.TotalUsage
 				count5 += 1
 				count30Value += stat.CPUStats.CPUUsage.TotalUsage
