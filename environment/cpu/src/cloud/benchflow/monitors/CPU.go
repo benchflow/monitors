@@ -8,13 +8,14 @@ import (
     "strings"
     "strconv"
     "os"
+    "sync"
 )
 import "github.com/fsouza/go-dockerclient"
 
 type Container struct {
 	ID string
 	statsChannel chan *docker.Stats
-	flagsChannel chan bool
+	doneChannel chan bool
 	last5 uint64
 	last5D uint64
 	last5Time time.Time
@@ -26,16 +27,20 @@ type Container struct {
 	last60Time time.Time
 	}
 
-var containers [10]Container
+var containers []Container
+var monitoring bool
+var stopChannel chan bool
+var doneChannel chan bool
+var waitGroup sync.WaitGroup
 
-func collectStats(client docker.Client, container Container) {
+func attachToContainer(client docker.Client, container Container) {
 	go func() {
 		err := client.Stats(docker.StatsOptions{
 			ID: container.ID,
    	 		Stats: container.statsChannel,
     		Stream: true,
-    		Done: container.flagsChannel,
-    		Timeout: time.Duration(10),
+    		Done: doneChannel,
+    		Timeout: 0,
 			})
 		if err != nil {
     		log.Fatal(err)
@@ -43,7 +48,7 @@ func collectStats(client docker.Client, container Container) {
 		}()
 	}
 
-func monitorStats(container *Container){
+func monitorStats(container Container){
 	go func() {
 		container.last5 = 0
 		container.last5D = 0
@@ -70,40 +75,51 @@ func monitorStats(container *Container){
 		var prev uint64
 		
 		for true{
-			stat := (<-container.statsChannel)
-			count5Value += stat.CPUStats.CPUUsage.TotalUsage
-			count5 += 1
-			count30Value += stat.CPUStats.CPUUsage.TotalUsage
-			count30 += 1
-			count60Value += stat.CPUStats.CPUUsage.TotalUsage
-			count60 += 1
-			timestamp = stat.Read
-			if count5 == 5 {
-				prev = container.last5
-				container.last5 = count5Value/5
-				container.last5D = container.last5 - prev
-				container.last5Time = timestamp
-				count5 = 0
-				}
-			if count30 == 30 {
-				prev = container.last30
-				container.last30 = count30Value/30
-				container.last30D = container.last30 - prev
-				container.last30Time = timestamp
-				count30 = 0
-				}
-			if count60 == 60 {
-				prev = container.last60
-				container.last60 = count60Value/60
-				container.last60D = container.last60 - prev
-				container.last60Time = timestamp
-				count60 = 0
+			select {
+			case <- stopChannel:
+				close(doneChannel);
+				waitGroup.Done()
+				return
+			default:
+				stat := (<-container.statsChannel)
+				count5Value += stat.CPUStats.CPUUsage.TotalUsage
+				count5 += 1
+				count30Value += stat.CPUStats.CPUUsage.TotalUsage
+				count30 += 1
+				count60Value += stat.CPUStats.CPUUsage.TotalUsage
+				count60 += 1
+				timestamp = stat.Read
+				if count5 == 5 {
+					prev = container.last5
+					container.last5 = count5Value/5
+					container.last5D = container.last5 - prev
+					container.last5Time = timestamp
+					count5 = 0
+					}
+				if count30 == 30 {
+					prev = container.last30
+					container.last30 = count30Value/30
+					container.last30D = container.last30 - prev
+					container.last30Time = timestamp
+					count30 = 0
+					}
+				if count60 == 60 {
+					prev = container.last60
+					container.last60 = count60Value/60
+					container.last60D = container.last60 - prev
+					container.last60Time = timestamp
+					count60 = 0
+					}
 				}
 			}
 		}()
 	}
 
 func totalHandler(w http.ResponseWriter, r *http.Request) {
+	if !monitoring {
+		fmt.Fprintf(w, "Currently not Monitoring")
+		return
+	}
 	query := r.FormValue("select")
 	if query == "all" {
 		for _, each := range containers {
@@ -130,6 +146,10 @@ func totalHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deltaHandler(w http.ResponseWriter, r *http.Request) {
+	if !monitoring {
+		fmt.Fprintf(w, "Currently not Monitoring")
+		return
+	}
 	query := r.FormValue("select")
 	if query == "all" {
 		for _, each := range containers {
@@ -154,32 +174,63 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 }
- 
-func main() {
-	/*
-	path := os.Getenv("DOCKER_CERT_PATH")
-	endpoint := os.Getenv("DOCKER_HOST")
-    ca := fmt.Sprintf("%s/ca.pem", path)
-    cert := fmt.Sprintf("%s/cert.pem", path)
-    key := fmt.Sprintf("%s/key.pem", path)
-    client, err := docker.NewTLSClient(endpoint, cert, key, ca)
-    */
+
+func startMonitoring(w http.ResponseWriter, r *http.Request) {
+	if monitoring {
+		fmt.Fprintf(w, "Already monitoring")
+		return
+	}
+	client := createDockerClient()
+	contEV := os.Getenv("CONTAINERS")
+	conts := strings.Split(contEV, ":")
+	containers = []Container{}
+	stopChannel = make(chan bool)
+	doneChannel = make(chan bool)
+	for _, each := range conts {
+		statsChannel := make(chan *docker.Stats)
+		c := Container{ID: each, statsChannel: statsChannel}
+		containers = append(containers, c)
+		attachToContainer(client, c)
+		monitorStats(c)
+		waitGroup.Add(1)
+	}
+	monitoring = true
+	fmt.Fprintf(w, "Started Monitoring")
+}
+
+func stopMonitoring(w http.ResponseWriter, r *http.Request) {
+	if !monitoring {
+		fmt.Fprintf(w, "Currently not Monitoring")
+		return
+	}
+	close(stopChannel)
+	waitGroup.Wait()
+	monitoring = false
+	fmt.Fprintf(w, "Stopped monitoring")
+}
+
+func createDockerClient() docker.Client {
+	//path := os.Getenv("DOCKER_CERT_PATH")
+	//endpoint := "tcp://"+os.Getenv("DOCKER_HOST")+":2376"
+	//endpoint = "tcp://192.168.99.100:2376"
+    //ca := fmt.Sprintf("%s/ca.pem", path)
+    //cert := fmt.Sprintf("%s/cert.pem", path)
+    //key := fmt.Sprintf("%s/key.pem", path)
+    //client, err := docker.NewTLSClient(endpoint, cert, key, ca)
 	endpoint := "unix:///var/run/docker.sock"
     client, err := docker.NewClient(endpoint)
 	if err != nil {
-    	log.Fatal(err)
+		log.Fatal(err)
+		}
+	return *client
 	}
-    contEV := os.Getenv("CONTAINERS")
-    conts := strings.Split(contEV, ":")
-    for i, each := range conts {
-    	statsChannel := make(chan *docker.Stats)
-		flagsChannel := make(chan bool)
-		c := Container{ID: each, statsChannel: statsChannel, flagsChannel: flagsChannel}
-		containers[i] = c
-		collectStats(*client, containers[i])
-		monitorStats(&containers[i])
-    	}
+ 
+func main() {
+	monitoring = false
+	
     http.HandleFunc("/total", totalHandler)
     http.HandleFunc("/delta", deltaHandler)
+    http.HandleFunc("/start", startMonitoring)
+	http.HandleFunc("/stop", stopMonitoring)
     http.ListenAndServe(":8080", nil)
 }
