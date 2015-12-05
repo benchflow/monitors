@@ -30,6 +30,7 @@ type Container struct {
 var containers []Container
 var monitoring bool
 var stopChannel chan bool
+var doneChannel chan bool
 var waitGroup sync.WaitGroup
 
 func attachToContainer(client docker.Client, container Container) {
@@ -38,7 +39,7 @@ func attachToContainer(client docker.Client, container Container) {
 			ID: container.ID,
    	 		Stats: container.statsChannel,
     		Stream: true,
-    		Done: container.doneChannel,
+    		Done: doneChannel,
     		Timeout: 0,
 			})
 		if err != nil {
@@ -76,7 +77,7 @@ func monitorStats(container Container){
 		for true{
 			select {
 			case <- stopChannel:
-				//container.doneChannel <- true;
+				close(doneChannel);
 				waitGroup.Done()
 				return
 			default:
@@ -184,10 +185,10 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	conts := strings.Split(contEV, ":")
 	containers = []Container{}
 	stopChannel = make(chan bool)
+	doneChannel = make(chan bool)
 	for _, each := range conts {
 		statsChannel := make(chan *docker.Stats)
-		doneChannel := make(chan bool)
-		c := Container{ID: each, statsChannel: statsChannel, doneChannel: doneChannel}
+		c := Container{ID: each, statsChannel: statsChannel}
 		containers = append(containers, c)
 		attachToContainer(client, c)
 		monitorStats(c)
@@ -209,15 +210,15 @@ func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 }
 
 func createDockerClient() docker.Client {
-	path := os.Getenv("DOCKER_CERT_PATH")
-	endpoint := "tcp://"+os.Getenv("DOCKER_HOST")+":2376"
-	endpoint = "tcp://192.168.99.100:2376"
-    ca := fmt.Sprintf("%s/ca.pem", path)
-    cert := fmt.Sprintf("%s/cert.pem", path)
-    key := fmt.Sprintf("%s/key.pem", path)
-    client, err := docker.NewTLSClient(endpoint, cert, key, ca)
-	//endpoint := "unix:///var/run/docker.sock"
-    //client, err := docker.NewClient(endpoint)
+	//path := os.Getenv("DOCKER_CERT_PATH")
+	//endpoint := "tcp://"+os.Getenv("DOCKER_HOST")+":2376"
+	//endpoint = "tcp://192.168.99.100:2376"
+    //ca := fmt.Sprintf("%s/ca.pem", path)
+    //cert := fmt.Sprintf("%s/cert.pem", path)
+    //key := fmt.Sprintf("%s/key.pem", path)
+    //client, err := docker.NewTLSClient(endpoint, cert, key, ca)
+	endpoint := "unix:///var/run/docker.sock"
+    client, err := docker.NewClient(endpoint)
 	if err != nil {
 		log.Fatal(err)
 		}
