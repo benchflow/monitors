@@ -42,6 +42,7 @@ deploy:
     secure: $GITHUB_ACCESS_TOKEN
   file: 
     - environment/cpu/bin/cpu
+    - dbms/sqlquery/mysql/bin/querymysql
   skip_cleanup: true
   on:
     tags: false

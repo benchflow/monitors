@@ -1,0 +1,9 @@
+FROM benchflow/base-images:dev
+
+MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
+
+COPY ./bin/querymysql_linux /app/querymysql
+RUN chmod +x /app/querymysql
+COPY ./services/300-query-mysql-monitor.conf /apps/chaperone.d/300-query-mysql-monitor.conf
+ 
+EXPOSE 8080

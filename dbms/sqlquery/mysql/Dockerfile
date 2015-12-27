@@ -1,20 +1,16 @@
-FROM golang
- 
-RUN apt-get update \
-	&& apt-get -y install mysql-client-5.5 \
-    && apt-get -y install p7zip \
-    && apt-get clean
+FROM benchflow/base-images:dev
 
-ADD src/cloud/benchflow/monitors /go/src/cloud/benchflow/monitors
+MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 
-RUN go get github.com/go-sql-driver/mysql
-RUN go install cloud/benchflow/monitors
+ENV MONITOR_NAME querymysql
+ENV MONITORS_VERSION v-dev
 
-ENV MYSQL_HOST db
-ENV MYSQL_USER root
-ENV MYSQL_USER_PASSWORD PASSWORD
-ENV MYSQL_DB_NAME stuff
+RUN apk --update add wget && \
+    wget -q --no-check-certificate -O /app/$MONITOR_NAME https://github.com/benchflow/monitors/releases/download/$MONITORS_VERSION/$MONITOR_NAME && \
+    chmod +x /app/$MONITOR_NAME && \
+    apk del --purge wget && \
+    rm -rf /var/cache/apk/*
 
-ENTRYPOINT /go/bin/monitors
- 
+COPY ./services/300-query-mysql-monitor.conf /apps/chaperone.d/300-query-mysql-monitor.conf
+
 EXPOSE 8080

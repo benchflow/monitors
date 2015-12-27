@@ -1,0 +1,5 @@
+Godeps/
+src/
+Makefile
+Dockerfile.test
+Dockerfile
