@@ -4,7 +4,7 @@ DOCKERIMAGENAME = benchflow/$(REPONAME):$(NAME)
 VERSION = dev
 GOPATH_SAVE_RESTORE:=$(GOPATH):`pwd`
 
-.PHONY: all clean build_release
+.PHONY: all clean build_release 
 
 all: clean build_release
 

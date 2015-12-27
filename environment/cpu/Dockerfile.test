@@ -1,0 +1,9 @@
+FROM benchflow/base-images:dev
+
+MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
+
+COPY ./bin/cpu_linux /app/cpu
+RUN chmod +x /app/cpu
+COPY ./services/300-cpu-monitor.conf /apps/chaperone.d/300-cpu-monitor.conf
+ 
+EXPOSE 8080
