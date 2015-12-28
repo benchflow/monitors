@@ -9,7 +9,7 @@ GOPATH_SAVE_RESTORE:=$(GOPATH):`pwd`
 all: build_release
 
 save_dependencies:
-	cd src/cloud/benchflow/$(NAME)/ && \
+	cd src/cloud/benchflow/$(REPONAME)/ && \
 	GOPATH=$(GOPATH_SAVE_RESTORE) godep save ./... && \
 	rm -rf ../../../../Godeps/*.* && \
 	rm -rf ../../../../Godeps && \
