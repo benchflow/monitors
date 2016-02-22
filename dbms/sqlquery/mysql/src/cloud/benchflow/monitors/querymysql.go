@@ -4,13 +4,12 @@ import (
     "database/sql"
     _ "github.com/go-sql-driver/mysql"
     "fmt"
-    //"os"
+    "os"
     "net/http"
 )
 
 func queryHandler(w http.ResponseWriter, r *http.Request) {
-	//entryString := os.Getenv("MYSQL_USER")+":"+os.Getenv("MYSQL_USER_PASSWORD")+"@"+"tcp("+os.Getenv("MYSQL_HOST")+":"+os.Getenv("MYSQL_PORT")+")/"+os.Getenv("MYSQL_DB_NAME")
-	entryString := "root:PASSWORD@tcp(dockerVM:3306)/stuff"
+	entryString := os.Getenv("MYSQL_USER")+":"+os.Getenv("MYSQL_USER_PASSWORD")+"@"+"tcp("+os.Getenv("MYSQL_HOST")+":"+os.Getenv("MYSQL_PORT")+")/"+os.Getenv("MYSQL_DB_NAME")
     db, err := sql.Open("mysql", entryString)
     if err != nil {
         panic(err)
