@@ -27,13 +27,13 @@ type Container struct {
 	last60Time   time.Time
 }
 
-var containers []Container
+var containers []*Container
 var monitoring bool
 var stopChannel chan bool
 var doneChannel chan bool
 var waitGroup sync.WaitGroup
 
-func attachToContainer(client docker.Client, container Container) {
+func attachToContainer(client docker.Client, container *Container) {
 	go func() {
 		err := client.Stats(docker.StatsOptions{
 			ID:      container.ID,
@@ -43,12 +43,12 @@ func attachToContainer(client docker.Client, container Container) {
 			Timeout: 0,
 		})
 		if err != nil {
-			log.Fatal(err)
+			//log.Fatal(err)
 		}
 	}()
 }
 
-func monitorStats(container Container) {
+func monitorStats(container *Container) {
 	go func() {
 		container.last5 = 0
 		container.last5D = 0
@@ -82,6 +82,7 @@ func monitorStats(container Container) {
 				return
 			default:
 				stat := (<-container.statsChannel)
+				if(stat == nil) {panic("Received Nil from container")}
 				count5Value += stat.CPUStats.CPUUsage.TotalUsage
 				count5 += 1
 				count30Value += stat.CPUStats.CPUUsage.TotalUsage
@@ -182,16 +183,17 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	}
 	client := createDockerClient()
 	contEV := os.Getenv("CONTAINERS")
+	//contEV = "db"
 	conts := strings.Split(contEV, ":")
-	containers = []Container{}
+	containers = []*Container{}
 	stopChannel = make(chan bool)
 	doneChannel = make(chan bool)
 	for _, each := range conts {
 		statsChannel := make(chan *docker.Stats)
 		c := Container{ID: each, statsChannel: statsChannel}
-		containers = append(containers, c)
-		attachToContainer(client, c)
-		monitorStats(c)
+		containers = append(containers, &c)
+		attachToContainer(client, &c)
+		monitorStats(&c)
 		waitGroup.Add(1)
 	}
 	monitoring = true
@@ -210,9 +212,8 @@ func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 }
 
 func createDockerClient() docker.Client {
-	//path := os.Getenv("DOCKER_CERT_PATH")
-	//endpoint := "tcp://"+os.Getenv("DOCKER_HOST")+":2376"
-	//endpoint = "tcp://192.168.99.100:2376"
+	//path := "/Users/Gabo/.docker/machine/machines/default"
+	//endpoint := "tcp://192.168.99.100:2376"
 	//ca := fmt.Sprintf("%s/ca.pem", path)
 	//cert := fmt.Sprintf("%s/cert.pem", path)
 	//key := fmt.Sprintf("%s/key.pem", path)
