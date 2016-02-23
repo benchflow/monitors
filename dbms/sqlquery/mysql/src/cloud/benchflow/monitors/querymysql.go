@@ -5,6 +5,7 @@ import (
     _ "github.com/go-sql-driver/mysql"
     "fmt"
     "os"
+    "strconv"
     "net/http"
 )
 
@@ -18,7 +19,6 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w, "Connected to database \n")
     }
     query := r.FormValue("query")
-    fmt.Println(query)
     value := r.FormValue("value")
     method := r.FormValue("method")
     fmt.Fprintf(w, "Performing query: "+query+"\n")
@@ -29,7 +29,9 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
     if err == nil {
         fmt.Fprintf(w, "Queried database \n")
     }
+    rowI := 0
     for rows.Next() {
+    	rowI = rowI + 1
         var name string 
         err = rows.Scan(&name)
         if err != nil {
@@ -37,12 +39,12 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
         }
         if name == value {
         	if(method == "equal") {
-        		fmt.Fprintf(w, name+" matches "+value+" \n")
+        		fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
         		}
         	}
         if name != value {
         	if(method == "nequal") {
-        		fmt.Fprintf(w, name+" doesn't match "+value+" \n")
+        		fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
         		}
         	}
     }
