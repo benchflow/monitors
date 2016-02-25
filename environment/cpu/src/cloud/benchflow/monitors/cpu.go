@@ -82,10 +82,7 @@ func monitorStats(container *Container) {
 				return
 			default:
 				stat := (<-container.statsChannel)
-				if(stat == nil) {
-					fmt.Println("Received Nil from docker socket")
-					continue
-					}
+				if(stat == nil) {panic("Received Nil from container")}
 				count5Value += stat.CPUStats.CPUUsage.TotalUsage
 				count5 += 1
 				count30Value += stat.CPUStats.CPUUsage.TotalUsage
