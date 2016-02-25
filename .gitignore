@@ -1,2 +1,5 @@
 bin/
+pkg/
+src/Github.com
 Godeps/_workspace/pkg/
+dbms/sqlquery/mysql/benchflow_make

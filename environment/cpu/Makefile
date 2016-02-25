@@ -43,8 +43,10 @@ build_container_local:
 
 test_container_local:
 	docker run -d -e "MYSQL_ALLOW_EMPTY_PASSWORD=true" --name db mysql 
-	docker run -d -e "CONTAINERS=db" -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock --name $(NAME) $(DOCKERIMAGENAME)_$(VERSION)
+	docker run -d -e "CONTAINERS=db" -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock:ro --name $(NAME) $(DOCKERIMAGENAME)_$(VERSION)
 	#TODO: add actual calls to the API exposed by the monitor (http://www.codingpedia.org/ama/how-to-test-a-rest-api-from-command-line-with-curl/)
+	
+build_and_test_container_local: build_container_local test_container_local
 
 rm_container_local:
 	docker rm -f -v db

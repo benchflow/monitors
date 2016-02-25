@@ -2,7 +2,7 @@ REPONAME = monitors
 NAME = querymysql
 DOCKERIMAGENAME = benchflow/$(REPONAME):$(NAME)
 VERSION = dev
-GOPATH_SAVE_RESTORE:=$(GOPATH):`pwd`
+GOPATH_SAVE_RESTORE:=`pwd`"/Godeps/_workspace"
 
 .PHONY: all build_release 
 
@@ -42,7 +42,15 @@ build_container_local:
 	rm bin/$(NAME)_linux
 
 test_container_local:
-	#TODO
+	docker run -d --name db -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=stuff mysql
+	docker run -d -ti -e "ENVCONSUL_CONSUL=$(ENVCONSUL_CONSUL)" \
+	-e "MYSQL_DB_NAME=stuff" -e "MYSQL_HOST=localhost" \
+	-e "MYSQL_PORT=3306" -e "MYSQL_USER=root" -e "MYSQL_USER_PASSWORD=password" \
+	-e "CONTAINER_NAME=$(NAME)" -e "MONITOR_NAME=$(NAME)" -e "DATA_NAME=$(NAME)" \
+	-p 8080:8080 --name $(NAME) $(DOCKERIMAGENAME)_$(VERSION)
 
+build_and_test_container_local: build_container_local test_container_local
+	
 rm_container_local:
-	#TODO
+	docker rm -f -v db
+	docker rm -f -v $(NAME)

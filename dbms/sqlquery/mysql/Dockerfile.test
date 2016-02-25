@@ -4,6 +4,8 @@ MAINTAINER Vincenzo FERME <info@vincenzoferme.it>
 
 COPY ./bin/querymysql_linux /app/querymysql
 RUN chmod +x /app/querymysql
-COPY ./services/300-query-mysql-monitor.conf /apps/chaperone.d/300-query-mysql-monitor.conf
+#TODO: change back, changed for testing purposes
+#COPY ./services/300-query-mysql-monitor.conf /apps/chaperone.d/300-query-mysql-monitor.conf
+CMD /app/querymysql
  
 EXPOSE 8080

@@ -1,7 +1,13 @@
 {
 	"ImportPath": "cloud/benchflow/monitors",
-	"GoVersion": "go1.5.1",
+	"GoVersion": "go1.5.2",
 	"Packages": [
 		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/go-sql-driver/mysql",
+			"Rev": "1309049fd598c1faa0290fd70ab1afde2b6df0f9"
+		}
 	]
 }
