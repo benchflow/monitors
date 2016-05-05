@@ -46,7 +46,7 @@ test_container_local:
 	docker run -d -ti -e "ENVCONSUL_CONSUL=$(ENVCONSUL_CONSUL)" \
 	-e "MYSQL_DB_NAME=stuff" -e "MYSQL_HOST=localhost" \
 	-e "MYSQL_PORT=3306" -e "MYSQL_USER=root" -e "MYSQL_USER_PASSWORD=password" \
-	-e "CONTAINER_NAME=$(NAME)" -e "MONITOR_NAME=$(NAME)" -e "DATA_NAME=$(NAME)" \
+	-e "BENCHFLOW_CONTAINER_NAME=$(NAME)" -e "BENCHFLOW_MONITOR_NAME=$(NAME)" -e "BENCHFLOW_DATA_NAME=$(NAME)" \
 	-p 8080:8080 --name $(NAME) $(DOCKERIMAGENAME)_$(VERSION)
 
 build_and_test_container_local: build_container_local test_container_local
