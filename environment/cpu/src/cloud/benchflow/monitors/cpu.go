@@ -5,11 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
 	"sync"
 	"time"
 	"github.com/fsouza/go-dockerclient"
+	"encoding/json"
 )
 
 type Container struct {
@@ -27,28 +28,25 @@ type Container struct {
 	last60Time   time.Time
 }
 
-var containers []*Container
+var containers []Container
 var monitoring bool
 var stopChannel chan bool
-var doneChannel chan bool
+//var doneChannel chan bool
 var waitGroup sync.WaitGroup
 
-func attachToContainer(client docker.Client, container *Container) {
+func attachToContainer(client docker.Client, container Container) {
 	go func() {
-		err := client.Stats(docker.StatsOptions{
+		_ = client.Stats(docker.StatsOptions{
 			ID:      container.ID,
 			Stats:   container.statsChannel,
 			Stream:  true,
-			Done:    doneChannel,
+			Done:    container.doneChannel,
 			Timeout: 0,
 		})
-		if err != nil {
-			//log.Fatal(err)
-		}
 	}()
 }
 
-func monitorStats(container *Container) {
+func monitorStats(container Container) {
 	go func() {
 		container.last5 = 0
 		container.last5D = 0
@@ -77,16 +75,17 @@ func monitorStats(container *Container) {
 		for true {
 			select {
 			case <-stopChannel:
-				close(doneChannel)
+				close(container.doneChannel)
 				waitGroup.Done()
 				return
 			default:
 				stat := (<-container.statsChannel)
 				if(stat == nil) {
 					fmt.Println("Received nil value")
-					close(doneChannel)
-					waitGroup.Done()
-					break
+					//close(container.doneChannel)
+					//waitGroup.Done()
+					//break
+					continue
 					}
 				count5Value += stat.CPUStats.CPUUsage.TotalUsage
 				count5 += 1
@@ -121,6 +120,7 @@ func monitorStats(container *Container) {
 	}()
 }
 
+/*
 func totalHandler(w http.ResponseWriter, r *http.Request) {
 	if !monitoring {
 		fmt.Fprintf(w, "Currently not Monitoring")
@@ -180,6 +180,41 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+*/
+
+func dataHandler(w http.ResponseWriter, r *http.Request) {
+	if !monitoring {
+		fmt.Fprintf(w, "Currently not Monitoring")
+		return
+	}
+	query := r.FormValue("select")
+	if query == "all" {
+		for _, each := range containers {
+			if each.ID != "" {
+				js, err := json.Marshal(each)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				    return
+			    }
+			    w.Header().Set("Content-Type", "application/json")
+			    w.Write(js)
+			}
+		}
+	}
+	if query != "all" {
+		for _, each := range containers {
+			if each.ID == query {
+				js, err := json.Marshal(each)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				    return
+			    }
+			    w.Header().Set("Content-Type", "application/json")
+			    w.Write(js)
+			}
+		}
+	}
+}
 
 func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	if monitoring {
@@ -188,17 +223,22 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	}
 	client := createDockerClient()
 	contEV := os.Getenv("CONTAINERS")
-	//contEV = "db"
-	conts := strings.Split(contEV, ":")
-	containers = []*Container{}
+	conts := strings.Split(contEV, ",")
+	fmt.Println(conts)
+	containers = []Container{}
 	stopChannel = make(chan bool)
-	doneChannel = make(chan bool)
 	for _, each := range conts {
+		containerInspect, err := client.InspectContainer(each)
+		if err != nil {
+			panic(err)
+			}
+		ID := containerInspect.ID
 		statsChannel := make(chan *docker.Stats)
-		c := Container{ID: each, statsChannel: statsChannel}
-		containers = append(containers, &c)
-		attachToContainer(client, &c)
-		monitorStats(&c)
+		doneChannel := make(chan bool)
+		c := Container{ID: ID, statsChannel: statsChannel, doneChannel: doneChannel}
+		containers = append(containers, c)
+		attachToContainer(client, c)
+		monitorStats(c)
 		waitGroup.Add(1)
 	}
 	monitoring = true
@@ -217,25 +257,26 @@ func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 }
 
 func createDockerClient() docker.Client {
-	//path := "/Users/Gabo/.docker/machine/machines/default"
+	//path := os.Getenv("DOCKER_CERT_PATH")
 	//endpoint := "tcp://192.168.99.100:2376"
-	//ca := fmt.Sprintf("%s/ca.pem", path)
-	//cert := fmt.Sprintf("%s/cert.pem", path)
-	//key := fmt.Sprintf("%s/key.pem", path)
-	//client, err := docker.NewTLSClient(endpoint, cert, key, ca)
+    //ca := fmt.Sprintf("%s/ca.pem", path)
+    //cert := fmt.Sprintf("%s/cert.pem", path)
+    //key := fmt.Sprintf("%s/key.pem", path)
+    //client, err := docker.NewTLSClient(endpoint, cert, key, ca)
 	endpoint := "unix:///var/run/docker.sock"
-	client, err := docker.NewClient(endpoint)
+    client, err := docker.NewClient(endpoint)
 	if err != nil {
 		log.Fatal(err)
-	}
+		}
 	return *client
 }
 
 func main() {
 	monitoring = false
 
-	http.HandleFunc("/total", totalHandler)
-	http.HandleFunc("/delta", deltaHandler)
+	//http.HandleFunc("/total", totalHandler)
+	//http.HandleFunc("/delta", deltaHandler)
+	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/start", startMonitoring)
 	http.HandleFunc("/stop", stopMonitoring)
 	http.ListenAndServe(":8080", nil)
