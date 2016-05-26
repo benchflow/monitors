@@ -10,17 +10,21 @@ import (
     "encoding/json"
 )
 
+// Struct for the Json respone for this monitor
 type Response struct {
   Result bool
 }
 
+// Handler for when the monitor is called
 func queryHandler(w http.ResponseWriter, r *http.Request) {
+	// Connecting to database
 	entryString := os.Getenv("MYSQL_USER")+":"+os.Getenv("MYSQL_USER_PASSWORD")+"@"+"tcp("+os.Getenv("MYSQL_HOST")+":"+os.Getenv("MYSQL_PORT")+")/"+os.Getenv("MYSQL_DB_NAME")
     db, err := sql.Open("mysql", entryString)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
 	    return
     }
+    // Taking the query to perform, the value to compare, and the method to apply (equal, nequal)
     query := r.FormValue("query")
     value := r.FormValue("value")
     method := r.FormValue("method")
@@ -29,6 +33,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusBadRequest)
 	    return
     }
+    // Checks over the rows if the comparison holds
     rowI := 0
     response := Response{false}
     for rows.Next() {
@@ -51,6 +56,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
         		}
         	}
     }
+    // Closes db and sends response to client
     db.Close()
     
     js, err := json.Marshal(response)

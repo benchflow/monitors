@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 )
 
+// Container struct to hold all the data for a container
 type Container struct {
 	ID           string
 	statsChannel chan *docker.Stats
@@ -28,12 +29,21 @@ type Container struct {
 	last60Time   time.Time
 }
 
+// List of containers being monitored
 var containers []Container
+
+// Bool to define whether we are currently monitoring or not
 var monitoring bool
+
+// Stop channel to signal for stopping monitoring
 var stopChannel chan bool
+
 //var doneChannel chan bool
+
+// Sync group to wait for all goroutines to stop
 var waitGroup sync.WaitGroup
 
+// Attach to a container to read stats
 func attachToContainer(client docker.Client, container Container) {
 	go func() {
 		_ = client.Stats(docker.StatsOptions{
@@ -46,6 +56,7 @@ func attachToContainer(client docker.Client, container Container) {
 	}()
 }
 
+// Goroutine to monitor stats for the cpu, saving delta and total for the past 5, 30 and 60 seconds
 func monitorStats(container Container) {
 	go func() {
 		container.last5 = 0
@@ -74,10 +85,12 @@ func monitorStats(container Container) {
 
 		for true {
 			select {
+			// If stopped, stop monitoring all containers
 			case <-stopChannel:
 				close(container.doneChannel)
 				waitGroup.Done()
 				return
+			// By default, take stats and save values
 			default:
 				stat := (<-container.statsChannel)
 				if(stat == nil) {
@@ -182,6 +195,7 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 }
 */
 
+// Handler for when the monitor is called, responds with the data in JSON format
 func dataHandler(w http.ResponseWriter, r *http.Request) {
 	if !monitoring {
 		fmt.Fprintf(w, "Currently not Monitoring")
@@ -216,6 +230,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Start to monitor the containers
 func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	if monitoring {
 		fmt.Fprintf(w, "Already monitoring")
@@ -245,6 +260,7 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Started Monitoring")
 }
 
+// Stop monitoring the containers
 func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 	if !monitoring {
 		fmt.Fprintf(w, "Currently not Monitoring")
@@ -256,6 +272,7 @@ func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Stopped monitoring")
 }
 
+// Creates the docker client using the socket
 func createDockerClient() docker.Client {
 	//path := os.Getenv("DOCKER_CERT_PATH")
 	//endpoint := "tcp://192.168.99.100:2376"
