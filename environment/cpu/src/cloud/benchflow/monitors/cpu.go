@@ -19,6 +19,7 @@ type Response struct {
 
 // Container struct to hold all the data for a container
 type Container struct {
+	Name         string
 	ID           string
 	statsChannel chan *docker.Stats
 	doneChannel  chan bool
@@ -202,14 +203,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		query := r.FormValue("select")
 		if query == "all" {
 			for _, each := range containers {
-				if each.ID != "" {
+				if each.ID != "" && each.Name != "" {
 					response.Containers = append(response.Containers, each)
 				}
 			}
 		} else
 		if query != "all" {
 			for _, each := range containers {
-				if each.ID == query {
+				if each.ID == query || each.Name == query {
 					response.Containers = append(response.Containers, each)
 				    break
 				}
@@ -245,7 +246,7 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 		ID := containerInspect.ID
 		statsChannel := make(chan *docker.Stats)
 		doneChannel := make(chan bool)
-		c := Container{ID: ID, statsChannel: statsChannel, doneChannel: doneChannel}
+		c := Container{Name: each, ID: ID, statsChannel: statsChannel, doneChannel: doneChannel}
 		containers = append(containers, c)
 		attachToContainer(client, c)
 		monitorStats(c)
