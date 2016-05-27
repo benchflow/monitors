@@ -13,6 +13,7 @@ import (
 // Struct for the Json respone for this monitor
 type Response struct {
   Result bool
+  Query_response string
 }
 
 // Handler for when the monitor is called
@@ -35,35 +36,40 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
     }
     // Checks over the rows if the comparison holds
     rowI := 0
-    response := Response{false}
+    result := false
+    queryResponse := ""
     for rows.Next() {
     	rowI = rowI + 1
         var name string 
         err = rows.Scan(&name)
         if err != nil {
-            panic(err)
+            http.Error(w, err.Error(), http.StatusBadRequest)
+	    	return
         }
+        queryResponse += name
+        queryResponse += " "
         if name == value {
         	if(method == "equal") {
         		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
-        		response = Response{true}
+        		result = true
         		} else
         	if(method == "nequal") {
         		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
-        		response = Response{false}
+        		result = false
         		}
         	} else
         if name != value {
         	if(method == "equal") {
         		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
-        		response = Response{false}
+        		result = false
         		} else
         	if(method == "nequal") {
         		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
-        		response = Response{true}
+        		result = true
         		}
         	}
         }
+    response := Response{result, queryResponse}
     // Closes db and sends response to client
     db.Close()
     
