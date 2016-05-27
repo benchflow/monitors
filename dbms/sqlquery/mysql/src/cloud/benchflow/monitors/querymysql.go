@@ -48,14 +48,22 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
         		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
         		response = Response{true}
         		}
+        	if(method == "nequal") {
+        		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
+        		response = Response{false}
+        		}
         	}
         if name != value {
+        	if(method == "equal") {
+        		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
+        		response = Response{false}
+        		}
         	if(method == "nequal") {
         		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
         		response = Response{true}
         		}
         	}
-    }
+        }
     // Closes db and sends response to client
     db.Close()
     
