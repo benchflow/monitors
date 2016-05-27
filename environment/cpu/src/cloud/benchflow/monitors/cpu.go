@@ -13,6 +13,10 @@ import (
 	"encoding/json"
 )
 
+type Response struct {
+  Containers []Container
+}
+
 // Container struct to hold all the data for a container
 type Container struct {
 	ID           string
@@ -94,10 +98,6 @@ func monitorStats(container Container) {
 			default:
 				stat := (<-container.statsChannel)
 				if(stat == nil) {
-					fmt.Println("Received nil value")
-					//close(container.doneChannel)
-					//waitGroup.Done()
-					//break
 					continue
 					}
 				count5Value += stat.CPUStats.CPUUsage.TotalUsage
@@ -197,43 +197,38 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler for when the monitor is called, responds with the data in JSON format
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	if !monitoring {
-		fmt.Fprintf(w, "Currently not Monitoring")
-		return
-	}
-	query := r.FormValue("select")
-	if query == "all" {
-		for _, each := range containers {
-			if each.ID != "" {
-				js, err := json.Marshal(each)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				    return
-			    }
-			    w.Header().Set("Content-Type", "application/json")
-			    w.Write(js)
+	response := Response{[]Container{}}
+	if monitoring {
+		query := r.FormValue("select")
+		if query == "all" {
+			for _, each := range containers {
+				if each.ID != "" {
+					response.Containers = append(response.Containers, each)
+				}
+			}
+		}
+		if query != "all" {
+			for _, each := range containers {
+				if each.ID == query {
+					response.Containers = append(response.Containers, each)
+				    break
+				}
 			}
 		}
 	}
-	if query != "all" {
-		for _, each := range containers {
-			if each.ID == query {
-				js, err := json.Marshal(each)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				    return
-			    }
-			    w.Header().Set("Content-Type", "application/json")
-			    w.Write(js)
-			}
-		}
-	}
+	js, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	    return
+    }
+	w.Header().Set("Content-Type", "application/json")
+    w.Write(js)
 }
 
 // Start to monitor the containers
 func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	if monitoring {
-		fmt.Fprintf(w, "Already monitoring")
+		w.WriteHeader(409)
 		return
 	}
 	client := createDockerClient()
@@ -257,29 +252,23 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 		waitGroup.Add(1)
 	}
 	monitoring = true
-	fmt.Fprintf(w, "Started Monitoring")
+	w.WriteHeader(200)
 }
 
 // Stop monitoring the containers
 func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 	if !monitoring {
-		fmt.Fprintf(w, "Currently not Monitoring")
+		w.WriteHeader(409)
 		return
 	}
 	close(stopChannel)
 	waitGroup.Wait()
 	monitoring = false
-	fmt.Fprintf(w, "Stopped monitoring")
+	w.WriteHeader(200)
 }
 
 // Creates the docker client using the socket
 func createDockerClient() docker.Client {
-	//path := os.Getenv("DOCKER_CERT_PATH")
-	//endpoint := "tcp://192.168.99.100:2376"
-    //ca := fmt.Sprintf("%s/ca.pem", path)
-    //cert := fmt.Sprintf("%s/cert.pem", path)
-    //key := fmt.Sprintf("%s/key.pem", path)
-    //client, err := docker.NewTLSClient(endpoint, cert, key, ca)
 	endpoint := "unix:///var/run/docker.sock"
     client, err := docker.NewClient(endpoint)
 	if err != nil {
@@ -290,9 +279,6 @@ func createDockerClient() docker.Client {
 
 func main() {
 	monitoring = false
-
-	//http.HandleFunc("/total", totalHandler)
-	//http.HandleFunc("/delta", deltaHandler)
 	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/start", startMonitoring)
 	http.HandleFunc("/stop", stopMonitoring)
