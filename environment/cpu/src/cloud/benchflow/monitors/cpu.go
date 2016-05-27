@@ -206,7 +206,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 					response.Containers = append(response.Containers, each)
 				}
 			}
-		}
+		} else
 		if query != "all" {
 			for _, each := range containers {
 				if each.ID == query {
