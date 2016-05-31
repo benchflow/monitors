@@ -244,9 +244,10 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 			}
 		ID := containerInspect.ID
+		name := containerInspect.Name
 		statsChannel := make(chan *docker.Stats)
 		doneChannel := make(chan bool)
-		c := Container{Name: each, ID: ID, statsChannel: statsChannel, doneChannel: doneChannel}
+		c := Container{Name: name, ID: ID, statsChannel: statsChannel, doneChannel: doneChannel}
 		containers = append(containers, c)
 		attachToContainer(client, c)
 		monitorStats(c)

@@ -35,11 +35,9 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	    return
     }
     // Checks over the rows if the comparison holds
-    rowI := 0
     result := false
     queryResponse := ""
     for rows.Next() {
-    	rowI = rowI + 1
         var name string 
         err = rows.Scan(&name)
         if err != nil {
