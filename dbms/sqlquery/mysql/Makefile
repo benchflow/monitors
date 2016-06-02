@@ -42,11 +42,12 @@ build_container_local:
 	rm bin/$(NAME)_linux
 
 test_container_local:
-	docker run -d --name db -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=stuff mysql
+	docker run -d --name db -p 3306:3306 -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=stuff mysql
 	docker run -d -ti -e "ENVCONSUL_CONSUL=$(ENVCONSUL_CONSUL)" \
-	-e "MYSQL_DB_NAME=stuff" -e "MYSQL_HOST=localhost" \
+	-e "MYSQL_DB_NAME=stuff" -e "MYSQL_HOST=db" \
 	-e "MYSQL_PORT=3306" -e "MYSQL_USER=root" -e "MYSQL_USER_PASSWORD=password" \
-	-e "CONTAINER_NAME=$(NAME)" -e "MONITOR_NAME=$(NAME)" -e "DATA_NAME=$(NAME)" \
+	-e "BENCHFLOW_CONTAINER_NAME=$(NAME)" -e "BENCHFLOW_MONITOR_NAME=$(NAME)" -e "BENCHFLOW_DATA_NAME=$(NAME)" \
+	--link db:db \
 	-p 8080:8080 --name $(NAME) $(DOCKERIMAGENAME)_$(VERSION)
 
 build_and_test_container_local: build_container_local test_container_local

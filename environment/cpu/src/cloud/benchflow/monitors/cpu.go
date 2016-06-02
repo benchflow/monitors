@@ -5,14 +5,21 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
 	"sync"
 	"time"
 	"github.com/fsouza/go-dockerclient"
+	"encoding/json"
 )
 
+type Response struct {
+  Containers []Container
+}
+
+// Container struct to hold all the data for a container
 type Container struct {
+	Name         string
 	ID           string
 	statsChannel chan *docker.Stats
 	doneChannel  chan bool
@@ -27,28 +34,35 @@ type Container struct {
 	last60Time   time.Time
 }
 
-var containers []*Container
+// List of containers being monitored
+var containers []Container
+
+// Bool to define whether we are currently monitoring or not
 var monitoring bool
+
+// Stop channel to signal for stopping monitoring
 var stopChannel chan bool
-var doneChannel chan bool
+
+//var doneChannel chan bool
+
+// Sync group to wait for all goroutines to stop
 var waitGroup sync.WaitGroup
 
-func attachToContainer(client docker.Client, container *Container) {
+// Attach to a container to read stats
+func attachToContainer(client docker.Client, container Container) {
 	go func() {
-		err := client.Stats(docker.StatsOptions{
+		_ = client.Stats(docker.StatsOptions{
 			ID:      container.ID,
 			Stats:   container.statsChannel,
 			Stream:  true,
-			Done:    doneChannel,
+			Done:    container.doneChannel,
 			Timeout: 0,
 		})
-		if err != nil {
-			//log.Fatal(err)
-		}
 	}()
 }
 
-func monitorStats(container *Container) {
+// Goroutine to monitor stats for the cpu, saving delta and total for the past 5, 30 and 60 seconds
+func monitorStats(container Container) {
 	go func() {
 		container.last5 = 0
 		container.last5D = 0
@@ -76,17 +90,16 @@ func monitorStats(container *Container) {
 
 		for true {
 			select {
+			// If stopped, stop monitoring all containers
 			case <-stopChannel:
-				close(doneChannel)
+				close(container.doneChannel)
 				waitGroup.Done()
 				return
+			// By default, take stats and save values
 			default:
 				stat := (<-container.statsChannel)
 				if(stat == nil) {
-					fmt.Println("Received nil value")
-					close(doneChannel)
-					waitGroup.Done()
-					break
+					continue
 					}
 				count5Value += stat.CPUStats.CPUUsage.TotalUsage
 				count5 += 1
@@ -121,6 +134,7 @@ func monitorStats(container *Container) {
 	}()
 }
 
+/*
 func totalHandler(w http.ResponseWriter, r *http.Request) {
 	if !monitoring {
 		fmt.Fprintf(w, "Currently not Monitoring")
@@ -180,62 +194,94 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+*/
 
+// Handler for when the monitor is called, responds with the data in JSON format
+func dataHandler(w http.ResponseWriter, r *http.Request) {
+	response := Response{[]Container{}}
+	if monitoring {
+		query := r.FormValue("select")
+		if query == "all" {
+			for _, each := range containers {
+				if each.ID != "" && each.Name != "" {
+					response.Containers = append(response.Containers, each)
+				}
+			}
+		} else
+		if query != "all" {
+			for _, each := range containers {
+				if each.ID == query || each.Name == query {
+					response.Containers = append(response.Containers, each)
+				    break
+				}
+			}
+		}
+	}
+	js, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	    return
+    }
+	w.Header().Set("Content-Type", "application/json")
+    w.Write(js)
+}
+
+// Start to monitor the containers
 func startMonitoring(w http.ResponseWriter, r *http.Request) {
 	if monitoring {
-		fmt.Fprintf(w, "Already monitoring")
+		w.WriteHeader(409)
 		return
 	}
 	client := createDockerClient()
 	contEV := os.Getenv("CONTAINERS")
-	//contEV = "db"
-	conts := strings.Split(contEV, ":")
-	containers = []*Container{}
+	conts := strings.Split(contEV, ",")
+	fmt.Println(conts)
+	containers = []Container{}
 	stopChannel = make(chan bool)
-	doneChannel = make(chan bool)
 	for _, each := range conts {
+		containerInspect, err := client.InspectContainer(each)
+		if err != nil {
+			panic(err)
+			}
+		ID := containerInspect.ID
+		name := containerInspect.Name
 		statsChannel := make(chan *docker.Stats)
-		c := Container{ID: each, statsChannel: statsChannel}
-		containers = append(containers, &c)
-		attachToContainer(client, &c)
-		monitorStats(&c)
+		doneChannel := make(chan bool)
+		c := Container{Name: name, ID: ID, statsChannel: statsChannel, doneChannel: doneChannel}
+		containers = append(containers, c)
+		attachToContainer(client, c)
+		monitorStats(c)
 		waitGroup.Add(1)
 	}
 	monitoring = true
-	fmt.Fprintf(w, "Started Monitoring")
+	w.WriteHeader(200)
 }
 
+// Stop monitoring the containers
 func stopMonitoring(w http.ResponseWriter, r *http.Request) {
 	if !monitoring {
-		fmt.Fprintf(w, "Currently not Monitoring")
+		w.WriteHeader(409)
 		return
 	}
 	close(stopChannel)
 	waitGroup.Wait()
 	monitoring = false
-	fmt.Fprintf(w, "Stopped monitoring")
+	w.WriteHeader(200)
 }
 
+// Creates the docker client using the socket
 func createDockerClient() docker.Client {
-	//path := "/Users/Gabo/.docker/machine/machines/default"
-	//endpoint := "tcp://192.168.99.100:2376"
-	//ca := fmt.Sprintf("%s/ca.pem", path)
-	//cert := fmt.Sprintf("%s/cert.pem", path)
-	//key := fmt.Sprintf("%s/key.pem", path)
-	//client, err := docker.NewTLSClient(endpoint, cert, key, ca)
 	endpoint := "unix:///var/run/docker.sock"
-	client, err := docker.NewClient(endpoint)
+    client, err := docker.NewClient(endpoint)
 	if err != nil {
 		log.Fatal(err)
-	}
+		}
 	return *client
 }
 
 func main() {
 	monitoring = false
-
-	http.HandleFunc("/total", totalHandler)
-	http.HandleFunc("/delta", deltaHandler)
+	http.HandleFunc("/data", dataHandler)
 	http.HandleFunc("/start", startMonitoring)
 	http.HandleFunc("/stop", stopMonitoring)
 	http.ListenAndServe(":8080", nil)
