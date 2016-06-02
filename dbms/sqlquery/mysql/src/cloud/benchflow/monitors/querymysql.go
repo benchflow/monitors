@@ -37,38 +37,38 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
     // Checks over the rows if the comparison holds
     result := false
     queryResponse := ""
-    for rows.Next() {
-        var name string 
-        err = rows.Scan(&name)
-        if err != nil {
-            http.Error(w, err.Error(), http.StatusBadRequest)
-	    	return
-        }
-        queryResponse += name
-        queryResponse += " "
-        if name == value {
-        	if(method == "equal") {
-        		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
-        		result = true
-        		} else
-        	if(method == "nequal") {
-        		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
-        		result = false
-        		}
-        	} else
-        if name != value {
-        	if(method == "equal") {
-        		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
-        		result = false
-        		} else
-        	if(method == "nequal") {
-        		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
-        		result = true
-        		}
-        	}
-        }
+    rows.Next() 
+    var name string 
+    err = rows.Scan(&name)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+    	return
+    }
+    queryResponse += name
+    queryResponse += " "
+    if name == value {
+    	if(method == "equal") {
+    		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
+    		result = true
+    		} else
+    	if(method == "nequal") {
+    		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
+    		result = false
+    		}
+    	} else
+    if name != value {
+    	if(method == "equal") {
+    		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" matches "+value+" \n")
+    		result = false
+    		} else
+    	if(method == "nequal") {
+    		//fmt.Fprintf(w, "Row "+strconv.Itoa(rowI)+" doesn't match "+value+" \n")
+    		result = true
+    		}
+    	}
     response := Response{result, queryResponse}
     // Closes db and sends response to client
+    rows.Close()
     db.Close()
     
     js, err := json.Marshal(response)
