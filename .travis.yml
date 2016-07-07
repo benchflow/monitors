@@ -28,11 +28,7 @@ cache:
 
 before_install:
   - go get github.com/tools/godep
-  # Attempt to fix for java 7: https://github.com/travis-ci/travis-ci/issues/5545
-  # reference: http://stevenschwenke.de/cannotFindSymbolInTravisAndShippable
-  - export JAVA_HOME="/usr/lib/jvm/java-7-oracle"
-  - export PATH="$PATH:/usr/lib/jvm/java-7-oracle/bin"
-  - java -version
+  - jdk_switcher use oraclejdk7
 
 # test that the services and the library build correclty
 install: 
