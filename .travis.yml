@@ -56,7 +56,7 @@ deploy:
   file: 
     - environment/cpu/bin/cpu
     - dbms/sqlquery/mysql/bin/querymysql
-    - target/benchflow-monitors-driver-library.jar
+    - monitors-driver-library/target/benchflow-monitors-driver-library.jar
   skip_cleanup: true
   on:
     tags: false
