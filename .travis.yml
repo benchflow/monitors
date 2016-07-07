@@ -32,8 +32,6 @@ before_install:
   # reference: http://stevenschwenke.de/cannotFindSymbolInTravisAndShippable
   - export JAVA_HOME="/usr/lib/jvm/java-7-oracle"
   - export PATH="$PATH:/usr/lib/jvm/java-7-oracle/bin"
-  - export java_path="/usr/lib/jvm/java-7-oracle/jre/bin/java"
-  - update-alternatives --set java $java_path
   - java -version
 
 # test that the services and the library build correclty
