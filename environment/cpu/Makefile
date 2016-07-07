@@ -2,22 +2,39 @@ REPONAME = monitors
 NAME = cpu
 DOCKERIMAGENAME = benchflow/$(REPONAME):$(NAME)
 VERSION = dev
-GOPATH_SAVE_RESTORE:=$(GOPATH):`pwd`
+GOPATH_SAVE_RESTORE:=$(shell pwd):${GOPATH}
 
 .PHONY: all build_release 
 
 all: build_release
 
 save_dependencies:
-	cd src/cloud/benchflow/$(REPONAME)/ && \
-	GOPATH=$(GOPATH_SAVE_RESTORE) godep save ./... && \
-	rm -rf ../../../../Godeps/*.* && \
-	rm -rf ../../../../Godeps && \
-	mv Godeps/ ../../../.. && \
-	cd ../../../..
+	# TODO: figure out how to get the following work, currently we add the dependencies to the Godeps.json manually
+	# - refer to the following issue: https://github.com/benchflow/benchflow/issues/33
+	# cd src/cloud/benchflow/$(REPONAME)/ && \
+	# GOPATH=$(GOPATH_SAVE_RESTORE) godep save ./... && \
+	# rm -rf ../../../../Godeps/*.* && \
+	# rm -rf ../../../../Godeps && \
+	# mv Godeps/ ../../../.. && \
+	# cd ../../../..
 
 restore_dependencies:
+	# TODO: make it working with all the folders
+	rm -rf Godeps/_workspace/src/golang.org/*
+	rm -rf Godeps/_workspace/src/github.com/*
 	GOPATH=$(GOPATH_SAVE_RESTORE) godep restore ./...
+	# TODO: make it working with all but cloud folder
+	mv src/golang.org/* Godeps/_workspace/src/golang.org
+	mv src/github.com/* Godeps/_workspace/src/github.com
+	rm -rf src/golang.org
+	rm -rf src/github.com
+
+# TODO: figure out how to get vendor dependencies committed with the standard git flow
+# - refer to the following issue: https://github.com/benchflow/benchflow/issues/33
+prepare_to_commit:
+	cd Godeps && \
+	find . | grep .git/ | xargs rm -rf && \
+	git add --all -f .
 
 clean:
 	go clean -i ./...
