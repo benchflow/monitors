@@ -57,6 +57,16 @@
 			"args": []
 		},
 		{
+			"name": "chown",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "chown32",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
 			"name": "clock_getres",
 			"action": "SCMP_ACT_ALLOW",
 			"args": []
@@ -208,6 +218,21 @@
 		},
 		{
 			"name": "fchmodat",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "fchown",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "fchown32",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "fchownat",
 			"action": "SCMP_ACT_ALLOW",
 			"args": []
 		},
@@ -557,6 +582,16 @@
 			"args": []
 		},
 		{
+			"name": "lchown",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "lchown32",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
 			"name": "lgetxattr",
 			"action": "SCMP_ACT_ALLOW",
 			"args": []
@@ -648,6 +683,21 @@
 		},
 		{
 			"name": "mknodat",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "mlock",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "mlock2",
+			"action": "SCMP_ACT_ALLOW",
+			"args": []
+		},
+		{
+			"name": "mlockall",
 			"action": "SCMP_ACT_ALLOW",
 			"args": []
 		},
@@ -1523,41 +1573,6 @@
 			"args": []
 		},
 		{
-			"name": "chown",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
-			"name": "chown32",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
-			"name": "fchown",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
-			"name": "fchown32",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
-			"name": "fchownat",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
-			"name": "lchown",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
-			"name": "lchown32",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
-		},
-		{
 			"name": "chroot",
 			"action": "SCMP_ACT_ALLOW",
 			"args": []
@@ -1573,11 +1588,6 @@
 					"op": "SCMP_CMP_MASKED_EQ"
 				}
 			]
-		},
-		{
-			"name": "fchown",
-			"action": "SCMP_ACT_ALLOW",
-			"args": []
 		}
 	]
 }

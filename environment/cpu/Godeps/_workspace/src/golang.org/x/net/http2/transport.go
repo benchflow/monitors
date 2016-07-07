@@ -77,6 +77,10 @@ type Transport struct {
 	// uncompressed.
 	DisableCompression bool
 
+	// AllowHTTP, if true, permits HTTP/2 requests using the insecure,
+	// plain-text "http" scheme. Note that this does not enable h2c support.
+	AllowHTTP bool
+
 	// MaxHeaderListSize is the http2 SETTINGS_MAX_HEADER_LIST_SIZE to
 	// send in the initial settings frame. It is how many bytes
 	// of response headers are allow. Unlike the http2 spec, zero here
@@ -149,6 +153,7 @@ type ClientConn struct {
 	inflow       flow       // peer's conn-level flow control
 	closed       bool
 	goAway       *GoAwayFrame             // if non-nil, the GoAwayFrame we received
+	goAwayDebug  string                   // goAway frame's debug data, retained as a string
 	streams      map[uint32]*clientStream // client-initiated
 	nextStreamID uint32
 	bw           *bufio.Writer
@@ -192,6 +197,7 @@ type clientStream struct {
 	done chan struct{} // closed when stream remove from cc.streams map; close calls guarded by cc.mu
 
 	// owned by clientConnReadLoop:
+	firstByte    bool // got the first response byte
 	pastHeaders  bool // got first MetaHeadersFrame (actual headers)
 	pastTrailers bool // got optional second MetaHeadersFrame (trailers)
 
@@ -275,20 +281,24 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // authorityAddr returns a given authority (a host/IP, or host:port / ip:port)
 // and returns a host:port. The port 443 is added if needed.
-func authorityAddr(authority string) (addr string) {
+func authorityAddr(scheme string, authority string) (addr string) {
 	if _, _, err := net.SplitHostPort(authority); err == nil {
 		return authority
 	}
-	return net.JoinHostPort(authority, "443")
+	port := "443"
+	if scheme == "http" {
+		port = "80"
+	}
+	return net.JoinHostPort(authority, port)
 }
 
 // RoundTripOpt is like RoundTrip, but takes options.
 func (t *Transport) RoundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Response, error) {
-	if req.URL.Scheme != "https" {
+	if !(req.URL.Scheme == "https" || (req.URL.Scheme == "http" && t.AllowHTTP)) {
 		return nil, errors.New("http2: unsupported scheme")
 	}
 
-	addr := authorityAddr(req.URL.Host)
+	addr := authorityAddr(req.URL.Scheme, req.URL.Host)
 	for {
 		cc, err := t.connPool().GetClientConn(req, addr)
 		if err != nil {
@@ -485,7 +495,17 @@ func (t *Transport) NewClientConn(c net.Conn) (*ClientConn, error) {
 func (cc *ClientConn) setGoAway(f *GoAwayFrame) {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
+
+	old := cc.goAway
 	cc.goAway = f
+
+	// Merge the previous and current GoAway error frames.
+	if cc.goAwayDebug == "" {
+		cc.goAwayDebug = string(f.DebugData())
+	}
+	if old != nil && old.ErrCode != ErrCodeNo {
+		cc.goAway.ErrCode = old.ErrCode
+	}
 }
 
 func (cc *ClientConn) CanTakeNewRequest() bool {
@@ -1151,6 +1171,19 @@ func (cc *ClientConn) readLoop() {
 	}
 }
 
+// GoAwayError is returned by the Transport when the server closes the
+// TCP connection after sending a GOAWAY frame.
+type GoAwayError struct {
+	LastStreamID uint32
+	ErrCode      ErrCode
+	DebugData    string
+}
+
+func (e GoAwayError) Error() string {
+	return fmt.Sprintf("http2: server sent GOAWAY and closed the connection; LastStreamID=%v, ErrCode=%v, debug=%q",
+		e.LastStreamID, e.ErrCode, e.DebugData)
+}
+
 func (rl *clientConnReadLoop) cleanup() {
 	cc := rl.cc
 	defer cc.tconn.Close()
@@ -1161,10 +1194,18 @@ func (rl *clientConnReadLoop) cleanup() {
 	// TODO: also do this if we've written the headers but not
 	// gotten a response yet.
 	err := cc.readerErr
-	if err == io.EOF {
-		err = io.ErrUnexpectedEOF
-	}
 	cc.mu.Lock()
+	if err == io.EOF {
+		if cc.goAway != nil {
+			err = GoAwayError{
+				LastStreamID: cc.goAway.LastStreamID,
+				ErrCode:      cc.goAway.ErrCode,
+				DebugData:    cc.goAwayDebug,
+			}
+		} else {
+			err = io.ErrUnexpectedEOF
+		}
+	}
 	for _, cs := range rl.activeRes {
 		cs.bufPipe.CloseWithError(err)
 	}
@@ -1245,17 +1286,20 @@ func (rl *clientConnReadLoop) processHeaders(f *MetaHeadersFrame) error {
 		// was just something we canceled, ignore it.
 		return nil
 	}
+	if !cs.firstByte {
+		if cs.trace != nil {
+			// TODO(bradfitz): move first response byte earlier,
+			// when we first read the 9 byte header, not waiting
+			// until all the HEADERS+CONTINUATION frames have been
+			// merged. This works for now.
+			traceFirstResponseByte(cs.trace)
+		}
+		cs.firstByte = true
+	}
 	if !cs.pastHeaders {
 		cs.pastHeaders = true
 	} else {
 		return rl.processTrailers(cs, f)
-	}
-	if cs.trace != nil {
-		// TODO(bradfitz): move first response byte earlier,
-		// when we first read the 9 byte header, not waiting
-		// until all the HEADERS+CONTINUATION frames have been
-		// merged. This works for now.
-		traceFirstResponseByte(cs.trace)
 	}
 
 	res, err := rl.handleResponse(cs, f)
@@ -1447,8 +1491,12 @@ func (b transportResponseBody) Read(p []byte) (n int, err error) {
 		cc.inflow.add(connAdd)
 	}
 	if err == nil { // No need to refresh if the stream is over or failed.
-		if v := cs.inflow.available(); v < transportDefaultStreamFlow-transportDefaultStreamMinRefresh {
-			streamAdd = transportDefaultStreamFlow - v
+		// Consider any buffered body data (read from the conn but not
+		// consumed by the client) when computing flow control for this
+		// stream.
+		v := int(cs.inflow.available()) + cs.bufPipe.Len()
+		if v < transportDefaultStreamFlow-transportDefaultStreamMinRefresh {
+			streamAdd = int32(transportDefaultStreamFlow - v)
 			cs.inflow.add(streamAdd)
 		}
 	}

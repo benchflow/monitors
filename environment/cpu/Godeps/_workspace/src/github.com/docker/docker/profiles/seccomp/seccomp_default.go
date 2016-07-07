@@ -29,6 +29,8 @@ func arches() []types.Arch {
 		return []types.Arch{types.ArchMIPSEL, types.ArchMIPSEL64, types.ArchMIPSEL64N32}
 	case "mipsel64n32":
 		return []types.Arch{types.ArchMIPSEL, types.ArchMIPSEL64, types.ArchMIPSEL64N32}
+	case "s390x":
+		return []types.Arch{types.ArchS390, types.ArchS390X}
 	default:
 		return []types.Arch{}
 	}
@@ -88,6 +90,17 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 			Action: types.ActAllow,
 			Args:   []*types.Arg{},
 		},
+		{
+			Name:   "chown",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "chown32",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+
 		{
 			Name:   "clock_getres",
 			Action: types.ActAllow,
@@ -240,6 +253,21 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 		},
 		{
 			Name:   "fchmodat",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "fchown",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "fchown32",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "fchownat",
 			Action: types.ActAllow,
 			Args:   []*types.Arg{},
 		},
@@ -589,6 +617,16 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 			Args:   []*types.Arg{},
 		},
 		{
+			Name:   "lchown",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "lchown32",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
 			Name:   "lgetxattr",
 			Action: types.ActAllow,
 			Args:   []*types.Arg{},
@@ -680,6 +718,21 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 		},
 		{
 			Name:   "mknodat",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "mlock",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "mlock2",
+			Action: types.ActAllow,
+			Args:   []*types.Arg{},
+		},
+		{
+			Name:   "mlockall",
 			Action: types.ActAllow,
 			Args:   []*types.Arg{},
 		},
@@ -1543,6 +1596,7 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 		},
 	}
 
+	var sysCloneFlagsIndex uint
 	var arch string
 	var native, err = libseccomp.GetNativeArch()
 	if err == nil {
@@ -1584,6 +1638,26 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 				Args:   []*types.Arg{},
 			},
 		}...)
+	case "s390", "s390x":
+		syscalls = append(syscalls, []*types.Syscall{
+			{
+				Name:   "s390_pci_mmio_read",
+				Action: types.ActAllow,
+				Args:   []*types.Arg{},
+			},
+			{
+				Name:   "s390_pci_mmio_write",
+				Action: types.ActAllow,
+				Args:   []*types.Arg{},
+			},
+			{
+				Name:   "s390_runtime_instr",
+				Action: types.ActAllow,
+				Args:   []*types.Arg{},
+			},
+		}...)
+		/* Flags parameter of the clone syscall is the 2nd on s390 */
+		sysCloneFlagsIndex = 1
 	}
 
 	capSysAdmin := false
@@ -1591,44 +1665,6 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 	var cap string
 	for _, cap = range rs.Process.Capabilities {
 		switch cap {
-		case "CAP_CHOWN":
-			syscalls = append(syscalls, []*types.Syscall{
-				{
-					Name:   "chown",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "chown32",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "fchown",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "fchown32",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "fchownat",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "lchown",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "lchown32",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-			}...)
 		case "CAP_DAC_READ_SEARCH":
 			syscalls = append(syscalls, []*types.Syscall{
 				{
@@ -1638,24 +1674,6 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 				},
 				{
 					Name:   "open_by_handle_at",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-			}...)
-		case "CAP_IPC_LOCK":
-			syscalls = append(syscalls, []*types.Syscall{
-				{
-					Name:   "mlock",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "mlock2",
-					Action: types.ActAllow,
-					Args:   []*types.Arg{},
-				},
-				{
-					Name:   "mlockall",
 					Action: types.ActAllow,
 					Args:   []*types.Arg{},
 				},
@@ -1843,23 +1861,12 @@ func DefaultProfile(rs *specs.Spec) *types.Seccomp {
 				Action: types.ActAllow,
 				Args: []*types.Arg{
 					{
-						Index:    0,
+						Index:    sysCloneFlagsIndex,
 						Value:    syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWUSER | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET,
 						ValueTwo: 0,
 						Op:       types.OpMaskedEqual,
 					},
 				},
-			},
-		}...)
-	}
-
-	// We need some additional syscalls in this case see #22252
-	if !rs.Process.NoNewPrivileges {
-		syscalls = append(syscalls, []*types.Syscall{
-			{
-				Name:   "fchown",
-				Action: types.ActAllow,
-				Args:   []*types.Arg{},
 			},
 		}...)
 	}

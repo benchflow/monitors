@@ -2,8 +2,12 @@
 	    localtest localunittest localintegration \
 	    test unittest integration
 
-RUNC_IMAGE := runc_dev
-RUNC_TEST_IMAGE := runc_test
+PREFIX := $(DESTDIR)/usr/local
+BINDIR := $(PREFIX)/sbin
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
+GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
+RUNC_IMAGE := runc_dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
+RUNC_TEST_IMAGE := runc_test$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 PROJECT := github.com/opencontainers/runc
 TEST_DOCKERFILE := script/test_Dockerfile
 BUILDTAGS := seccomp
@@ -16,13 +20,15 @@ export GOPATH := $(CURDIR)/Godeps/_workspace
 MAN_DIR := $(CURDIR)/man/man8
 MAN_PAGES = $(shell ls $(MAN_DIR)/*.8)
 MAN_PAGES_BASE = $(notdir $(MAN_PAGES))
-MAN_INSTALL_PATH := /usr/local/share/man/man8/
+MAN_INSTALL_PATH := ${PREFIX}/share/man/man8/
+
+VERSION := ${shell cat ./VERSION}
 
 all: $(RUNC_LINK)
-	go build -i -ldflags "-X main.gitCommit=${COMMIT}" -tags "$(BUILDTAGS)" -o runc .
+	go build -i -ldflags "-X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -tags "$(BUILDTAGS)" -o runc .
 
 static: $(RUNC_LINK)
-	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT}" -o runc .
+	CGO_ENABLED=1 go build -i -tags "$(BUILDTAGS) cgo static_build" -ldflags "-w -extldflags -static -X main.gitCommit=${COMMIT} -X main.version=${VERSION}" -o runc .
 
 $(RUNC_LINK):
 	ln -sfn $(CURDIR) $(RUNC_LINK)
@@ -53,7 +59,7 @@ unittest: runctestimage
 	docker run -e TESTFLAGS -ti --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localunittest
 
 localunittest: all
-	go test -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
+	go test -timeout 3m -tags "$(BUILDTAGS)" ${TESTFLAGS} -v ./...
 
 integration: runctestimage
 	docker run -e TESTFLAGS -t --privileged --rm -v $(CURDIR):/go/src/$(PROJECT) $(RUNC_TEST_IMAGE) make localintegration
@@ -62,14 +68,20 @@ localintegration: all
 	bats -t tests/integration${TESTFLAGS}
 
 install:
-	install -D -m0755 runc /usr/local/sbin/runc
+	install -D -m0755 runc $(BINDIR)/runc
+
+install-bash:
+	install -D -m0644 contrib/completions/bash/runc $(PREFIX)/share/bash-completion/completions/runc
 
 install-man:
 	install -d -m 755 $(MAN_INSTALL_PATH)
 	install -m 644 $(MAN_PAGES) $(MAN_INSTALL_PATH)
 
 uninstall:
-	rm -f /usr/local/sbin/runc
+	rm -f $(BINDIR)/runc
+
+uninstall-bash:
+	rm -f $(PREFIX)/share/bash-completion/completions/runc
 
 uninstall-man:
 	rm -f $(addprefix $(MAN_INSTALL_PATH),$(MAN_PAGES_BASE))

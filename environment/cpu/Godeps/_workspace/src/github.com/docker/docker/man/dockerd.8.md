@@ -6,6 +6,7 @@ dockerd - Enable daemon mode
 
 # SYNOPSIS
 **dockerd**
+[**--add-runtime**[=*[]*]]
 [**--api-cors-header**=[=*API-CORS-HEADER*]]
 [**--authorization-plugin**[=*[]*]]
 [**-b**|**--bridge**[=*BRIDGE*]]
@@ -42,6 +43,7 @@ dockerd - Enable daemon mode
 [**--isolation**[=*default*]]
 [**-l**|**--log-level**[=*info*]]
 [**--label**[=*[]*]]
+[**--live-restore**[=*false*]]
 [**--log-driver**[=*json-file*]]
 [**--log-opt**[=*map[]*]]
 [**--mtu**[=*0*]]
@@ -73,6 +75,9 @@ format.
 **dockerd [OPTIONS]**
 
 # OPTIONS
+
+**--add-runtime**=[]
+  Set additional OCI compatible runtime.
 
 **--api-cors-header**=""
   Set CORS headers in the remote API. Default is cors disabled. Give urls like "http://foo, http://bar, ...". Give "*" to allow all.
@@ -195,6 +200,9 @@ is `hyperv`. Linux only supports `default`.
 **--label**="[]"
   Set key=value labels to the daemon (displayed in `docker info`)
 
+**--live-restore**=*false*
+  Enable live restore of running containers when the daemon starts so that they are not restarted.
+
 **--log-driver**="*json-file*|*syslog*|*journald*|*gelf*|*fluentd*|*awslogs*|*splunk*|*etwlogs*|*gcplogs*|*none*"
   Default driver for container logs. Default is `json-file`.
   **Warning**: `docker logs` command works only for `json-file` logging driver.
@@ -226,7 +234,7 @@ output otherwise.
   Force the Docker runtime to use a specific storage driver.
 
 **--selinux-enabled**=*true*|*false*
-  Enable selinux support. Default is false. SELinux does not presently support the overlay storage driver.
+  Enable selinux support. Default is false. SELinux does not presently support either of the overlay storage drivers.
 
 **--storage-opt**=[]
   Set storage driver options. See STORAGE DRIVER OPTIONS.

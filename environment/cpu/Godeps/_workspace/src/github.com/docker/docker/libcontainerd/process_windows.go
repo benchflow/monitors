@@ -3,7 +3,7 @@ package libcontainerd
 import (
 	"io"
 
-	"github.com/docker/docker/pkg/system"
+	"github.com/Microsoft/hcsshim"
 )
 
 // process keeps the state for both main container process and exec process.
@@ -14,6 +14,7 @@ type process struct {
 
 	// commandLine is to support returning summary information for docker top
 	commandLine string
+	hcsProcess  hcsshim.Process
 }
 
 func openReaderFromPipe(p io.ReadCloser) io.Reader {
@@ -31,10 +32,14 @@ func openReaderFromPipe(p io.ReadCloser) io.Reader {
 // fixStdinBackspaceBehavior works around a bug in Windows before build 14350
 // where it interpreted DEL as VK_DELETE instead of as VK_BACK. This replaces
 // DEL with BS to work around this.
-func fixStdinBackspaceBehavior(w io.WriteCloser, tty bool) io.WriteCloser {
-	if !tty || system.GetOSVersion().Build >= 14350 {
+func fixStdinBackspaceBehavior(w io.WriteCloser, osversion string, tty bool) io.WriteCloser {
+	if !tty {
 		return w
 	}
+	if build := buildFromVersion(osversion); build == 0 || build >= 14350 {
+		return w
+	}
+
 	return &delToBsWriter{w}
 }
 
@@ -56,4 +61,28 @@ func (w *delToBsWriter) Write(b []byte) (int, error) {
 		}
 	}
 	return w.WriteCloser.Write(bc)
+}
+
+type stdInCloser struct {
+	io.WriteCloser
+	hcsshim.Process
+}
+
+func createStdInCloser(pipe io.WriteCloser, process hcsshim.Process) *stdInCloser {
+	return &stdInCloser{
+		WriteCloser: pipe,
+		Process:     process,
+	}
+}
+
+func (stdin *stdInCloser) Close() error {
+	if err := stdin.WriteCloser.Close(); err != nil {
+		return err
+	}
+
+	return stdin.Process.CloseStdin()
+}
+
+func (stdin *stdInCloser) Write(p []byte) (n int, err error) {
+	return stdin.WriteCloser.Write(p)
 }

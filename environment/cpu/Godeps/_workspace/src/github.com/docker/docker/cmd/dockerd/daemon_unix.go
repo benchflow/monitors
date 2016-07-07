@@ -71,6 +71,10 @@ func (cli *DaemonCli) getPlatformRemoteOptions() []libcontainerd.RemoteOption {
 		args := []string{"--systemd-cgroup=true"}
 		opts = append(opts, libcontainerd.WithRuntimeArgs(args))
 	}
+	if cli.Config.LiveRestore {
+		opts = append(opts, libcontainerd.WithLiveRestore(true))
+	}
+	opts = append(opts, libcontainerd.WithRuntimePath(daemon.DefaultRuntimeBinary))
 	return opts
 }
 
@@ -114,14 +118,12 @@ func notifyShutdown(err error) {
 }
 
 func wrapListeners(proto string, ls []net.Listener) []net.Listener {
-	if os.Getenv("DOCKER_HTTP_HOST_COMPAT") != "" {
-		switch proto {
-		case "unix":
-			ls[0] = &hack.MalformedHostHeaderOverride{ls[0]}
-		case "fd":
-			for i := range ls {
-				ls[i] = &hack.MalformedHostHeaderOverride{ls[i]}
-			}
+	switch proto {
+	case "unix":
+		ls[0] = &hack.MalformedHostHeaderOverride{ls[0]}
+	case "fd":
+		for i := range ls {
+			ls[i] = &hack.MalformedHostHeaderOverride{ls[i]}
 		}
 	}
 	return ls
