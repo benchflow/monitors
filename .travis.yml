@@ -9,7 +9,7 @@ env:
   - GOARCH=amd64
 gobuild_args:
 
-# adds support for java, to release the monitors-library  
+# adds support for java, to release the monitors-library
 addons:
   apt:
     packages:
@@ -29,9 +29,10 @@ cache:
 before_install:
   - go get github.com/tools/godep
   - jdk_switcher use oraclejdk7
+  - mvn validate
 
 # test that the services and the library build correclty
-install: 
+install:
   - make all
 
 # test that the image correclty build
@@ -53,7 +54,7 @@ deploy:
   provider: releases
   api_key:
     secure: $GITHUB_ACCESS_TOKEN
-  file: 
+  file:
     - environment/cpu/bin/cpu
     - dbms/sqlquery/mysql/bin/querymysql
     - monitors-driver-library/target/benchflow-monitors-driver-library.jar
