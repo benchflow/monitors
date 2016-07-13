@@ -4,3 +4,6 @@ src/Github.com
 Godeps/_workspace/pkg/
 dbms/sqlquery/mysql/benchflow_make
 monitors-driver-library/target
+monitors-driver-library/.idea
+monitors-driver-library/.settings
+*.iml

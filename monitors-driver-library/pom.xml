@@ -15,6 +15,26 @@
     	<java.version>1.7</java.version>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>cloud.benchflow</groupId>
+            <artifactId>faban-driver</artifactId>
+            <version>0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cloud.benchflow</groupId>
+            <artifactId>faban-agents</artifactId>
+            <version>0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.7</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -38,6 +58,27 @@
                         </manifest>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.2</version>
+                <executions>
+                    <execution>
+                        <id>install-faban-driver</id>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <groupId>cloud.benchflow</groupId>
+                            <artifactId>faban-driver</artifactId>
+                            <version>0.1</version>
+                            <packaging>jar</packaging>
+                            <file>${project.basedir}/lib/fabandriver.jar</file>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
