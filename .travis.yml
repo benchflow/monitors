@@ -29,7 +29,7 @@ cache:
 before_install:
   - go get github.com/tools/godep
   - jdk_switcher use oraclejdk7
-  - mvn validate
+  - mvn -f=monitors-driver-library/ validate
 
 # test that the services and the library build correclty
 install:
