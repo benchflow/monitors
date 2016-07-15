@@ -4,8 +4,10 @@ import cloud.benchflow.monitors.Monitor;
 import cloud.benchflow.monitors.MonitorAPI;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
-import com.sun.faban.driver.transport.hc3.ApacheHC3Transport;
 
+import org.apache.http.client.fluent.Request;
+
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -16,23 +18,17 @@ import java.util.logging.Logger;
  */
 public class QueryMySQLMonitor extends Monitor {
 
+    protected final static int SQLMONITOR_SLEEP_TIME = 5000;
+
     private String completionQuery;
     private String completionQueryValue;
     private String completionQueryMethod;
 
-    public QueryMySQLMonitor(ApacheHC3Transport http,
-                             Map<String, String> params,
-                             String endpoint,
-                             MonitorAPI api) {
-        this(http, params,endpoint,api,Logger.getLogger(QueryMySQLMonitor.class.getName()));
-    }
-
-    public QueryMySQLMonitor(ApacheHC3Transport http,
-                             Map<String, String> params,
+    public QueryMySQLMonitor(Map<String, String> params,
                              String endpoint,
                              MonitorAPI api,
                              Logger logger) {
-        super(http, params, endpoint, api, logger);
+        super(params, endpoint, api, logger);
         this.completionQuery = params.get("COMPLETION_QUERY");
         this.completionQueryValue = params.get("COMPLETION_QUERY_VALUE");
         this.completionQueryMethod = params.get("COMPLETION_QUERY_METHOD");
@@ -47,14 +43,14 @@ public class QueryMySQLMonitor extends Monitor {
                         + "&method=" + completionQueryMethod;
 
         while(true) {
-
-            String rawResponse = http.fetchURL(apiUrl).toString();
+            String rawResponse = Request.Get(apiUrl).execute().returnContent().asString(Charset.forName("UTF-8"));
             MonitorQueryResponse response = new Gson().fromJson(rawResponse, MonitorQueryResponse.class);
             if (response.isResult()) {
                 break;
             }
             else {
-                sleep(1000);
+                //TODO: we could use the query response to regulate the sleep amount
+                sleep(SQLMONITOR_SLEEP_TIME);
             }
         }
 
@@ -62,12 +58,12 @@ public class QueryMySQLMonitor extends Monitor {
 
     @Override
     protected void start() throws Exception {
-        http.fetchURL(endpoint + "/" + api.getStart());
+        Request.Get(endpoint + "/" + api.getStart());
     }
 
     @Override
     protected void stop() throws Exception{
-        http.fetchURL(endpoint + "/" + api.getStop());
+        Request.Get(endpoint + "/" + api.getStop());
     }
 
     private static class MonitorQueryResponse {

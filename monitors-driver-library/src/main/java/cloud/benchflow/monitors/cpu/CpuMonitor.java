@@ -14,19 +14,11 @@ import java.util.logging.Logger;
  */
 public class CpuMonitor extends Monitor {
 
-    public CpuMonitor(ApacheHC3Transport http,
-                      Map<String, String> params,
-                      String endpoint,
-                      MonitorAPI api) {
-        this(http, params, endpoint, api, Logger.getLogger(CpuMonitor.class.getName()));
-    }
-
-    public CpuMonitor(ApacheHC3Transport http,
-                      Map<String, String> params,
+    public CpuMonitor(Map<String, String> params,
                       String endpoint,
                       MonitorAPI api,
                       Logger logger) {
-        super(http, params, endpoint, api, logger);
+        super(params, endpoint, api, logger);
     }
 
     @Override
