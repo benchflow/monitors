@@ -2,7 +2,6 @@ package cloud.benchflow.monitors.cpu;
 
 import cloud.benchflow.monitors.Monitor;
 import cloud.benchflow.monitors.MonitorAPI;
-import com.sun.faban.driver.transport.hc3.ApacheHC3Transport;
 
 import java.util.Map;
 import java.util.logging.Logger;
