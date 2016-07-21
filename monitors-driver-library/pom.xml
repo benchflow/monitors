@@ -16,12 +16,7 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>cloud.benchflow</groupId>
-            <artifactId>faban-driver</artifactId>
-            <version>0.1</version>
-        </dependency>
-
+        
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
