@@ -27,7 +27,7 @@ public abstract class Monitor {
     }
 
     public abstract void monitor() throws Exception;
-    
+
     public abstract void start() throws Exception;
 
     public abstract void stop() throws Exception;
