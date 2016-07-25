@@ -198,6 +198,10 @@ func deltaHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler for when the monitor is called, responds with the data in JSON format
 func dataHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.WriteHeader(405)
+		return	
+	}
 	response := Response{[]Container{}}
 	if monitoring {
 		query := r.FormValue("select")
@@ -228,6 +232,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 // Start to monitor the containers
 func startMonitoring(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(405)
+		return	
+	}
 	if monitoring {
 		w.WriteHeader(409)
 		return
@@ -259,6 +267,10 @@ func startMonitoring(w http.ResponseWriter, r *http.Request) {
 
 // Stop monitoring the containers
 func stopMonitoring(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "DELETE" {
+		w.WriteHeader(405)
+		return	
+	}
 	if !monitoring {
 		w.WriteHeader(409)
 		return

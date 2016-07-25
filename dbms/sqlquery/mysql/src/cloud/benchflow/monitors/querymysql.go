@@ -18,6 +18,10 @@ type Response struct {
 
 // Handler for when the monitor is called
 func queryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.WriteHeader(405)
+		return	
+	}
 	// Connecting to database
 	entryString := os.Getenv("MYSQL_USER")+":"+os.Getenv("MYSQL_USER_PASSWORD")+"@"+"tcp("+os.Getenv("MYSQL_HOST")+":"+os.Getenv("MYSQL_PORT")+")/"+os.Getenv("MYSQL_DB_NAME")
     db, err := sql.Open("mysql", entryString)
