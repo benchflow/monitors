@@ -2,8 +2,6 @@ package cloud.benchflow.monitors.cpu;
 
 import cloud.benchflow.monitors.Monitor;
 import cloud.benchflow.monitors.MonitorAPI;
-import com.sun.faban.driver.transport.hc3.ApacheHC3Transport;
-
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -27,12 +25,12 @@ public class CpuMonitor extends Monitor {
     }
 
     @Override
-    protected void start() throws Exception {
+    public void start() throws Exception {
         //this doesn't do anything for now
     }
 
     @Override
-    protected void stop() throws Exception {
+    public void stop() throws Exception {
         //this doesn't do anything for now
     }
 

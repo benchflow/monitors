@@ -28,9 +28,9 @@ public abstract class Monitor {
 
     public abstract void monitor() throws Exception;
 
-    protected abstract void start() throws Exception;
+    public abstract void start() throws Exception;
 
-    protected abstract void stop() throws Exception;
+    public abstract void stop() throws Exception;
 
     final public void sleep(long millis) {
         try {
