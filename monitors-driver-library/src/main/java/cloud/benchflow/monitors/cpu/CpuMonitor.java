@@ -2,6 +2,7 @@ package cloud.benchflow.monitors.cpu;
 
 import cloud.benchflow.monitors.Monitor;
 import cloud.benchflow.monitors.MonitorAPI;
+
 import java.util.Map;
 import java.util.logging.Logger;
 
