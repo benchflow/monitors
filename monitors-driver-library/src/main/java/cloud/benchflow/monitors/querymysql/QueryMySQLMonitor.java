@@ -58,12 +58,12 @@ public class QueryMySQLMonitor extends Monitor {
 
     @Override
     public void start() throws Exception {
-        Request.Get(endpoint + "/" + api.getStart());
+        Request.Post(endpoint + "/" + api.getStart());
     }
 
     @Override
     public void stop() throws Exception{
-        Request.Get(endpoint + "/" + api.getStop());
+        Request.Delete(endpoint + "/" + api.getStop());
     }
 
     private static class MonitorQueryResponse {
