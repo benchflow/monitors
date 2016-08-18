@@ -18,3 +18,5 @@ endpoints:
   start: /start
   monitor: /data
   stop: /stop
+
+phase: end  
