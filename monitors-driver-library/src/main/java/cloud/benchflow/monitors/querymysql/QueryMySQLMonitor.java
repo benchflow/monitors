@@ -46,7 +46,13 @@ public class QueryMySQLMonitor extends Monitor {
         apiUrl = new URI(apiUrl).normalize().toString();
 
         while(true) {
+
+            logger.info("[QueryMySQL] About to query: " + apiUrl);
+            
             String rawResponse = Request.Get(apiUrl).execute().returnContent().asString(Charset.forName("UTF-8"));
+
+            logger.info("[QueryMySQL] Raw response: " + rawResponse);
+
             MonitorQueryResponse response = new Gson().fromJson(rawResponse, MonitorQueryResponse.class);
             if (response.isResult()) {
                 break;
@@ -62,12 +68,14 @@ public class QueryMySQLMonitor extends Monitor {
     @Override
     public void start() throws Exception {
         String startApi = new URI(endpoint + "/" + api.getStart()).normalize().toString();
+        logger.info("[QueryMySQL] About to start: " + startApi);
         Request.Post(startApi);
     }
 
     @Override
     public void stop() throws Exception{
         String stopApi = new URI(endpoint + "/" + api.getStop()).normalize().toString();
+        logger.info("[QueryMySQL] About to stop: " + stopApi);
         Request.Delete(stopApi);
     }
 
