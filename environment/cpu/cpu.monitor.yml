@@ -17,4 +17,4 @@ cpu:
 endpoints:
   monitor: /data
 
-phase: all  
+phase: end  
