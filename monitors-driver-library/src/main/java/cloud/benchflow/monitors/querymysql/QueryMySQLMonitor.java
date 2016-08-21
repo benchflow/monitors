@@ -7,6 +7,7 @@ import com.google.gson.annotations.SerializedName;
 
 import org.apache.http.client.fluent.Request;
 
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -42,6 +43,8 @@ public class QueryMySQLMonitor extends Monitor {
                         + "query=" + completionQuery + "&value=" + completionQueryValue
                         + "&method=" + completionQueryMethod;
 
+        apiUrl = new URI(apiUrl).normalize().toString();
+
         while(true) {
             String rawResponse = Request.Get(apiUrl).execute().returnContent().asString(Charset.forName("UTF-8"));
             MonitorQueryResponse response = new Gson().fromJson(rawResponse, MonitorQueryResponse.class);
@@ -58,12 +61,14 @@ public class QueryMySQLMonitor extends Monitor {
 
     @Override
     public void start() throws Exception {
-        Request.Post(endpoint + "/" + api.getStart());
+        String startApi = new URI(endpoint + "/" + api.getStart()).normalize().toString();
+        Request.Post(startApi);
     }
 
     @Override
     public void stop() throws Exception{
-        Request.Delete(endpoint + "/" + api.getStop());
+        String stopApi = new URI(endpoint + "/" + api.getStop()).normalize().toString();
+        Request.Delete(stopApi);
     }
 
     private static class MonitorQueryResponse {
