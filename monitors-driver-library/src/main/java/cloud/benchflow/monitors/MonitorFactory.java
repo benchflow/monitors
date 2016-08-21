@@ -24,7 +24,7 @@ public class MonitorFactory {
         MonitorAPI api = new MonitorAPI(startApi, monitorApi, stopApi);
         switch (monitorName) {
 
-            case "sqlquery": {
+            case "querymysql": {
                 return new QueryMySQLMonitor(parameters, endpoint, api, fabanLogger);
             }
 
