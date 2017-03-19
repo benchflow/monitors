@@ -18,7 +18,7 @@ addons:
 # whitelist
 branches:
   only:
-    - my-release
+    - dev
   except:
     - v-dev
 
@@ -48,7 +48,6 @@ before_deploy:
   - sudo wget https://github.com/benchflow/devops/raw/dev/ci/clean_v-dev_release.sh -O /usr/bin/clean_v-dev_release.sh
   - sudo chmod +x /usr/bin/clean_v-dev_release.sh
   - export REPO_NAME=monitors
-  - export USER_NAME=simonedavico
   - /usr/bin/clean_v-dev_release.sh
 
 deploy:
@@ -62,5 +61,5 @@ deploy:
   skip_cleanup: true
   on:
     tags: false
-    repo: simonedavico/monitors
-    branch: my-release
+    repo: benchflow/monitors
+    branch: dev
