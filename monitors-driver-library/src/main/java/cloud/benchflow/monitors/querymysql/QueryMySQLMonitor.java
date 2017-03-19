@@ -7,6 +7,7 @@ import com.google.gson.annotations.SerializedName;
 
 import org.apache.http.client.fluent.Request;
 
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -42,8 +43,16 @@ public class QueryMySQLMonitor extends Monitor {
                         + "query=" + completionQuery + "&value=" + completionQueryValue
                         + "&method=" + completionQueryMethod;
 
+        apiUrl = new URI(apiUrl).normalize().toString();
+
         while(true) {
+
+            logger.info("[QueryMySQL] About to query: " + apiUrl);
+            
             String rawResponse = Request.Get(apiUrl).execute().returnContent().asString(Charset.forName("UTF-8"));
+
+            logger.info("[QueryMySQL] Raw response: " + rawResponse);
+
             MonitorQueryResponse response = new Gson().fromJson(rawResponse, MonitorQueryResponse.class);
             if (response.isResult()) {
                 break;
@@ -57,13 +66,17 @@ public class QueryMySQLMonitor extends Monitor {
     }
 
     @Override
-    protected void start() throws Exception {
-        Request.Get(endpoint + "/" + api.getStart());
+    public void start() throws Exception {
+        String startApi = new URI(endpoint + "/" + api.getStart()).normalize().toString();
+        logger.info("[QueryMySQL] About to start: " + startApi);
+        Request.Post(startApi);
     }
 
     @Override
-    protected void stop() throws Exception{
-        Request.Get(endpoint + "/" + api.getStop());
+    public void stop() throws Exception{
+        String stopApi = new URI(endpoint + "/" + api.getStop()).normalize().toString();
+        logger.info("[QueryMySQL] About to stop: " + stopApi);
+        Request.Delete(stopApi);
     }
 
     private static class MonitorQueryResponse {

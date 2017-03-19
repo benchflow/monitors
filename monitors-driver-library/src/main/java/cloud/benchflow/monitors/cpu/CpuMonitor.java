@@ -26,12 +26,12 @@ public class CpuMonitor extends Monitor {
     }
 
     @Override
-    protected void start() throws Exception {
+    public void start() throws Exception {
         //this doesn't do anything for now
     }
 
     @Override
-    protected void stop() throws Exception {
+    public void stop() throws Exception {
         //this doesn't do anything for now
     }
 
